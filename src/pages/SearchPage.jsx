@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Search, AlertTriangle, CheckCircle, AlertCircle, HelpCircle, ChevronDown, ChevronUp, Globe } from 'lucide-react'
+import { Search, AlertTriangle, CheckCircle, AlertCircle, HelpCircle, ChevronDown, ChevronUp, Heart } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import { useAllergenStore } from '../store/allergenStore'
+import { useLikedFoodsStore } from '../store/likedFoodsStore'
 import { searchProducts, assessProduct } from '../lib/openFoodFacts'
 import { supabase } from '../lib/supabase'
 import { SEVERITY_STYLES } from '../lib/constants'
@@ -18,11 +19,12 @@ const RESULT_LABEL = {
   safe: 'Safe', warning: 'May contain — check label', unsafe: 'Contains allergens', unknown: 'Unknown',
 }
 
-function ProductCard({ product, allergens, profileId }) {
+function ProductCard({ product, allergens, profileId, likedIds, onLike }) {
   const [expanded, setExpanded] = useState(false)
   const [saved, setSaved] = useState(false)
   const { result, flagged } = assessProduct(product, allergens)
   const { icon: Icon, color } = RESULT_ICON[result]
+  const isLiked = likedIds.has(product.code)
 
   const handleSave = async () => {
     await supabase.from('scan_history').insert({
@@ -35,6 +37,11 @@ function ProductCard({ product, allergens, profileId }) {
       flagged_allergens: flagged,
     })
     setSaved(true)
+  }
+
+  const handleLike = (e) => {
+    e.stopPropagation()
+    onLike(product, isLiked)
   }
 
   return (
@@ -51,6 +58,9 @@ function ProductCard({ product, allergens, profileId }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Icon size={18} className={color} />
+          <button onClick={handleLike} className="p-1">
+            <Heart size={15} className={isLiked ? 'text-red-400 fill-red-400' : 'text-gray-300'} />
+          </button>
           {expanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </button>
@@ -104,10 +114,32 @@ export default function SearchPage() {
 
   const { activeProfile } = useProfileStore()
   const { allergens, fetchAllergens } = useAllergenStore()
+  const { likedFoods, fetchLikedFoods, addLikedFood, removeLikedFood } = useLikedFoodsStore()
 
   useEffect(() => {
-    if (activeProfile?.id) fetchAllergens(activeProfile.id)
+    if (activeProfile?.id) {
+      fetchAllergens(activeProfile.id)
+      fetchLikedFoods(activeProfile.id)
+    }
   }, [activeProfile?.id])
+
+  const likedIds = new Set(likedFoods.map((f) => f.barcode).filter(Boolean))
+
+  const handleLike = async (product, isLiked) => {
+    if (!activeProfile?.id) return
+    if (isLiked) {
+      const existing = likedFoods.find((f) => f.barcode === product.code)
+      if (existing) await removeLikedFood(existing.id)
+    } else {
+      await addLikedFood(activeProfile.id, {
+        name: product.product_name || 'Unknown product',
+        brand: product.brands ?? null,
+        barcode: product.code ?? null,
+        image_url: product.image_front_small_url ?? null,
+        off_url: product.code ? `https://world.openfoodfacts.org/product/${product.code}` : null,
+      })
+    }
+  }
 
   const handleCountryChange = (code) => {
     setCountry(code)
@@ -209,7 +241,14 @@ export default function SearchPage() {
         <div className="space-y-2">
           <p className="text-xs text-gray-400">{results.length} results for "{query}" in {currentCountry?.label}</p>
           {results.map((p) => (
-            <ProductCard key={p.code} product={p} allergens={allergens} profileId={activeProfile?.id} />
+            <ProductCard
+              key={p.code}
+              product={p}
+              allergens={allergens}
+              profileId={activeProfile?.id}
+              likedIds={likedIds}
+              onLike={handleLike}
+            />
           ))}
         </div>
       )}

@@ -70,12 +70,32 @@ export const COMMON_FOODS = [
 
 export function getFoodSuggestions(allergens) {
   const allergenTags = new Set(allergens.map((a) => a.off_tag).filter(Boolean))
+
+  // collect exception words from all allergens
+  const exceptionWords = []
+  for (const a of allergens) {
+    if (a.exceptions) {
+      a.exceptions.toLowerCase().split(/[\s,;]+/).forEach((w) => {
+        if (w.length > 2) exceptionWords.push(w)
+      })
+    }
+  }
+
+  const isException = (foodName) => {
+    if (!exceptionWords.length) return false
+    const name = foodName.toLowerCase()
+    return exceptionWords.some((w) => name.includes(w) || w.includes(name))
+  }
+
   const safe = []
   const unsafe = []
 
   for (const food of COMMON_FOODS) {
-    if (food.tags.some((t) => allergenTags.has(t))) unsafe.push(food)
-    else safe.push(food)
+    if (food.tags.some((t) => allergenTags.has(t)) && !isException(food.name)) {
+      unsafe.push(food)
+    } else {
+      safe.push(food)
+    }
   }
 
   return { safe: safe.slice(0, 10), unsafe: unsafe.slice(0, 10) }

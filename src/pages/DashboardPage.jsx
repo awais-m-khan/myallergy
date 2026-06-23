@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ScanLine, Search, AlertTriangle, Leaf, ChevronRight, Users, CheckCircle, XCircle } from 'lucide-react'
+import { ScanLine, Search, AlertTriangle, Leaf, ChevronRight, Users, CheckCircle, XCircle, Heart, ExternalLink, Trash2 } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import { useAllergenStore } from '../store/allergenStore'
 import { useDietaryStore } from '../store/dietaryStore'
+import { useLikedFoodsStore } from '../store/likedFoodsStore'
 import { SEVERITY_STYLES } from '../lib/constants'
 import { getFoodSuggestions } from '../lib/commonFoods'
 import { supabase } from '../lib/supabase'
@@ -76,11 +77,11 @@ function FoodSuggestions({ allergens }) {
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <CheckCircle size={18} className="text-green-500" /> Top 10 safe foods
           </h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-            {safe.map((f) => (
-              <div key={f.name} className="flex items-center gap-1.5 text-sm text-gray-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                {f.name}
+          <div className="space-y-2">
+            {safe.map((f, i) => (
+              <div key={f.name} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                <span className="w-5 h-5 rounded-full bg-green-50 text-green-600 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                <span className="text-sm text-gray-800">{f.name}</span>
               </div>
             ))}
           </div>
@@ -92,16 +93,64 @@ function FoodSuggestions({ allergens }) {
           <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <XCircle size={18} className="text-red-400" /> Top 10 to avoid
           </h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-            {unsafe.map((f) => (
-              <div key={f.name} className="flex items-center gap-1.5 text-sm text-gray-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                {f.name}
+          <div className="space-y-2">
+            {unsafe.map((f, i) => (
+              <div key={f.name} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+                <span className="w-5 h-5 rounded-full bg-red-50 text-red-500 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                <span className="text-sm text-gray-800">{f.name}</span>
               </div>
             ))}
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function LikedFoods({ profileId }) {
+  const { likedFoods, fetchLikedFoods, removeLikedFood, loading } = useLikedFoodsStore()
+
+  useEffect(() => {
+    if (profileId) fetchLikedFoods(profileId)
+  }, [profileId])
+
+  if (loading || likedFoods.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+          <Heart size={18} className="text-red-400 fill-red-400" /> Foods I like
+        </h2>
+        <Link to="/search" className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-0.5">
+          Find more <ChevronRight size={13} />
+        </Link>
+      </div>
+      <div className="space-y-2">
+        {likedFoods.map((f) => (
+          <div key={f.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+            {f.image_url ? (
+              <img src={f.image_url} alt="" className="w-9 h-9 rounded-lg object-contain bg-gray-50 shrink-0" />
+            ) : (
+              <div className="w-9 h-9 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-lg">🛒</div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{f.name}</p>
+              {f.brand && <p className="text-xs text-gray-400 truncate">{f.brand}</p>}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {f.off_url && (
+                <a href={f.off_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-400 hover:text-green-600">
+                  <ExternalLink size={13} />
+                </a>
+              )}
+              <button onClick={() => removeLikedFood(f.id)} className="p-1.5 text-gray-300 hover:text-red-400">
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -262,6 +311,9 @@ export default function DashboardPage() {
 
       {/* Food suggestions */}
       <FoodSuggestions allergens={allergens} />
+
+      {/* Liked foods */}
+      <LikedFoods profileId={activeProfile.id} />
 
       {/* Empty state CTAs */}
       {allergens.length === 0 && (
