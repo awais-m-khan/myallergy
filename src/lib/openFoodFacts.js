@@ -6,7 +6,8 @@ export async function searchProducts(query, page = 1) {
     json: '1',
     page_size: '20',
     page: String(page),
-    fields: 'code,product_name,brands,image_front_small_url,allergens_tags,traces_tags,ingredients_text',
+    search_simple: '1',
+    action: 'process',
   })
   const res = await fetch(`${BASE}/cgi/search.pl?${params}`)
   if (!res.ok) return []
