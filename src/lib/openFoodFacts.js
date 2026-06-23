@@ -1,21 +1,41 @@
 const BASE = 'https://world.openfoodfacts.org'
 
+const COUNTRY_TAGS = {
+  gb: 'en:united-kingdom',
+  us: 'en:united-states',
+  au: 'en:australia',
+  ca: 'en:canada',
+  ae: 'en:united-arab-emirates',
+  pk: 'en:pakistan',
+  in: 'en:india',
+  fr: 'en:france',
+  de: 'en:germany',
+}
+
 export async function searchProducts(query, country = 'gb', page = 1) {
-  const cc = country === 'world' ? 'world' : country
-  const base = cc === 'world' ? BASE : `https://${cc}.openfoodfacts.org`
   const params = new URLSearchParams({
     search_terms: query,
     json: '1',
-    page_size: '20',
+    page_size: '24',
     page: String(page),
     search_simple: '1',
     action: 'process',
     lc: 'en',
+    sort_by: 'unique_scans_n', // most scanned = most commonly known products
   })
-  const res = await fetch(`${base}/cgi/search.pl?${params}`)
+
+  if (country !== 'world' && COUNTRY_TAGS[country]) {
+    params.set('tagtype_0', 'countries')
+    params.set('tag_contains_0', 'contains')
+    params.set('tag_0', COUNTRY_TAGS[country])
+  }
+
+  const res = await fetch(`${BASE}/cgi/search.pl?${params}`)
   if (!res.ok) return []
   const json = await res.json()
-  return json.products ?? []
+
+  // filter out products with no English name
+  return (json.products ?? []).filter((p) => p.product_name && /[a-zA-Z]/.test(p.product_name))
 }
 
 export async function lookupBarcode(barcode) {
