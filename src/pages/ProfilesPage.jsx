@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck, Camera } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck, Camera, LogOut } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
 
 const EMOJIS = ['🙂','😊','🧒','👦','👧','🧑','👨','👩','🧓','👴','👵','🧑‍🍼','👶','🐣','🌱']
@@ -138,11 +139,17 @@ function ProfileModal({ profile, onClose, onSave }) {
 
 export default function ProfilesPage() {
   const { profiles, activeProfile, fetchProfiles, setActive, createProfile, updateProfile, uploadAvatar, deleteProfile, loading } = useProfileStore()
+  const signOut = useAuthStore((s) => s.signOut)
   const [modal, setModal] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [copied, setCopied] = useState(null)
   const [togglingShare, setTogglingShare] = useState(null)
   const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/auth', { replace: true })
+  }
 
   const handleToggleShare = async (profile) => {
     setTogglingShare(profile.id)
@@ -200,12 +207,21 @@ export default function ProfilesPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Profiles</h1>
-        <button
-          onClick={() => setModal('add')}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg"
-        >
-          <Plus size={16} /> Add profile
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModal('add')}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg"
+          >
+            <Plus size={16} /> Add profile
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+          >
+            <LogOut size={15} />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
       </div>
 
       {profiles.length === 0 ? (
@@ -265,11 +281,9 @@ export default function ProfilesPage() {
 
                   {profile.share_enabled && (
                     <div className="flex items-center gap-2 bg-green-50 rounded-lg px-2.5 py-1.5">
-                      <div className="flex-1 overflow-x-auto scrollbar-none min-w-0">
-                        <p className="text-xs text-green-700 font-mono whitespace-nowrap">
-                          {window.location.origin}/s/{profile.share_token}
-                        </p>
-                      </div>
+                      <p className="text-xs text-green-700 font-mono truncate flex-1">
+                        /s/{profile.share_token.slice(0, 8)}…
+                      </p>
                       <button onClick={() => handleCopyLink(profile)} className="shrink-0 text-green-600 hover:text-green-800">
                         {copied === profile.id ? <CheckCheck size={14} /> : <Copy size={14} />}
                       </button>
