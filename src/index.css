@@ -7,3 +7,12 @@
     @apply bg-gray-50 text-gray-900 antialiased;
   }
 }
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}

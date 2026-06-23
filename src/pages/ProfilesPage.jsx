@@ -265,9 +265,11 @@ export default function ProfilesPage() {
 
                   {profile.share_enabled && (
                     <div className="flex items-center gap-2 bg-green-50 rounded-lg px-2.5 py-1.5">
-                      <p className="text-xs text-green-700 truncate flex-1 font-mono">
-                        {window.location.origin}/s/{profile.share_token}
-                      </p>
+                      <div className="flex-1 overflow-x-auto scrollbar-none min-w-0">
+                        <p className="text-xs text-green-700 font-mono whitespace-nowrap">
+                          {window.location.origin}/s/{profile.share_token}
+                        </p>
+                      </div>
                       <button onClick={() => handleCopyLink(profile)} className="shrink-0 text-green-600 hover:text-green-800">
                         {copied === profile.id ? <CheckCheck size={14} /> : <Copy size={14} />}
                       </button>
