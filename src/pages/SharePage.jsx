@@ -122,7 +122,10 @@ export default function SharePage() {
                         <span className={`mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${SEVERITY_STYLES[s].badge}`}>
                           {a.name}
                         </span>
-                        {a.notes && <p className="text-sm text-gray-500">{a.notes}</p>}
+                        <div>
+                          {a.exceptions && <p className="text-xs text-amber-600 font-medium">Except: {a.exceptions}</p>}
+                          {a.notes && <p className="text-sm text-gray-500">{a.notes}</p>}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -12,6 +12,7 @@ function AllergenModal({ allergen, initialValues, onClose, onSave }) {
   const [severity, setSeverity] = useState(init.severity ?? 'moderate')
   const [diagnosedDate, setDiagnosedDate] = useState(init.diagnosed_date ?? '')
   const [notes, setNotes] = useState(init.notes ?? '')
+  const [exceptions, setExceptions] = useState(init.exceptions ?? '')
   const [offTag, setOffTag] = useState(init.off_tag ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -25,6 +26,7 @@ function AllergenModal({ allergen, initialValues, onClose, onSave }) {
       severity,
       diagnosed_date: diagnosedDate || null,
       notes: notes.trim() || null,
+      exceptions: exceptions.trim() || null,
       off_tag: offTag.trim() || null,
     })
     if (error) { setError(error.message); setSaving(false) } else { onClose() }
@@ -78,6 +80,20 @@ function AllergenModal({ allergen, initialValues, onClose, onSave }) {
               onChange={(e) => setDiagnosedDate(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Exceptions <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={exceptions}
+              onChange={(e) => setExceptions(e.target.value)}
+              placeholder="e.g. tuna is tolerated"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Flagged foods will show as a warning instead of unsafe</p>
           </div>
 
           <div>
@@ -205,6 +221,7 @@ export default function AllergensPage() {
                           Diagnosed {format(parseISO(a.diagnosed_date), 'd MMM yyyy')}
                         </p>
                       )}
+                      {a.exceptions && <p className="text-xs text-amber-600 mt-0.5">Except: {a.exceptions}</p>}
                       {a.notes && <p className="text-sm text-gray-500 mt-1">{a.notes}</p>}
                     </div>
                     <div className="flex gap-1 shrink-0">

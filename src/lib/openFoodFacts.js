@@ -1,6 +1,8 @@
 const BASE = 'https://world.openfoodfacts.org'
 
-export async function searchProducts(query, page = 1) {
+export async function searchProducts(query, country = 'gb', page = 1) {
+  const cc = country === 'world' ? 'world' : country
+  const base = cc === 'world' ? BASE : `https://${cc}.openfoodfacts.org`
   const params = new URLSearchParams({
     search_terms: query,
     json: '1',
@@ -8,8 +10,9 @@ export async function searchProducts(query, page = 1) {
     page: String(page),
     search_simple: '1',
     action: 'process',
+    lc: 'en',
   })
-  const res = await fetch(`${BASE}/cgi/search.pl?${params}`)
+  const res = await fetch(`${base}/cgi/search.pl?${params}`)
   if (!res.ok) return []
   const json = await res.json()
   return json.products ?? []
@@ -38,7 +41,9 @@ export function assessProduct(product, allergens) {
     const name = a.name.toLowerCase()
 
     if (allergenTags.includes(tag)) {
-      flagged.push({ ...a, match: 'contains' })
+      // has exceptions — downgrade to warning so user can check
+      const match = a.exceptions ? 'traces' : 'contains'
+      flagged.push({ ...a, match })
     } else if (tracesTags.includes(tag) || ingredientsText.includes(name)) {
       flagged.push({ ...a, match: 'traces' })
     }
