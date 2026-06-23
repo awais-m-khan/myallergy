@@ -3,7 +3,7 @@ import { Search, AlertTriangle, CheckCircle, AlertCircle, HelpCircle, ChevronDow
 import { useProfileStore } from '../store/profileStore'
 import { useAllergenStore } from '../store/allergenStore'
 import { useLikedFoodsStore } from '../store/likedFoodsStore'
-import { searchProducts, assessProduct } from '../lib/openFoodFacts'
+import { searchProducts, assessProduct, getIngredients } from '../lib/openFoodFacts'
 import { supabase } from '../lib/supabase'
 import { SEVERITY_STYLES } from '../lib/constants'
 import { getCountry, setCountry, COUNTRIES } from '../lib/settings'
@@ -23,6 +23,8 @@ function ProductCard({ product, allergens, profileId, likedIds, onLike }) {
   const [expanded, setExpanded] = useState(false)
   const [saved, setSaved] = useState(false)
   const { result, flagged } = assessProduct(product, allergens)
+  const ingredients = getIngredients(product)
+  const flaggedNames = new Set(flagged.map((f) => f.name.toLowerCase()))
   const { icon: Icon, color } = RESULT_ICON[result]
   const isLiked = likedIds.has(product.code)
 
@@ -89,6 +91,21 @@ function ProductCard({ product, allergens, profileId, likedIds, onLike }) {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {ingredients.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-400 font-medium mb-1.5">Ingredients</p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                {product.ingredients_text.split(/([,;])/).map((part, i) => {
+                  const lower = part.toLowerCase().trim()
+                  const isAllergen = [...flaggedNames].some((n) => lower.includes(n))
+                  return isAllergen
+                    ? <mark key={i} className="bg-red-100 text-red-700 rounded px-0.5 not-italic">{part}</mark>
+                    : <span key={i}>{part}</span>
+                })}
+              </p>
             </div>
           )}
 

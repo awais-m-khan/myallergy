@@ -46,16 +46,25 @@ export async function lookupBarcode(barcode) {
   return json.product
 }
 
+function parseIngredients(text) {
+  if (!text) return []
+  return text
+    .toLowerCase()
+    .split(/[,;()[\]]/)
+    .map((s) => s.replace(/\d+(\.\d+)?%?/g, '').trim())
+    .filter((s) => s.length > 1)
+}
+
 export function assessProduct(product, allergens) {
   if (!product) return { result: 'unknown', flagged: [] }
 
   const allergenTags = product.allergens_tags ?? []
   const tracesTags = product.traces_tags ?? []
-  const ingredientsText = (product.ingredients_text ?? '').toLowerCase()
+  const ingredients = parseIngredients(product.ingredients_text)
 
   const flagged = []
 
-  // only fall back to ingredients text search when OFF has no allergen tag data at all
+  // only fall back to ingredients list when OFF has no allergen tag data at all
   const hasTagData = allergenTags.length > 0 || tracesTags.length > 0
 
   for (const a of allergens) {
@@ -67,12 +76,11 @@ export function assessProduct(product, allergens) {
       flagged.push({ ...a, match })
     } else if (tracesTags.includes(tag)) {
       flagged.push({ ...a, match: 'traces' })
-    } else if (!hasTagData) {
-      // no tag data at all — fall back to ingredient text as last resort
+    } else if (!hasTagData && ingredients.length > 0) {
+      // parse actual ingredient list — whole-word match only, not substring
       const name = a.name.toLowerCase()
-      if (ingredientsText.includes(name)) {
-        flagged.push({ ...a, match: 'traces' })
-      }
+      const found = ingredients.some((ing) => ing === name || ing.startsWith(name + ' ') || ing.endsWith(' ' + name))
+      if (found) flagged.push({ ...a, match: 'traces' })
     }
   }
 
@@ -80,4 +88,8 @@ export function assessProduct(product, allergens) {
 
   const hasContains = flagged.some((f) => f.match === 'contains')
   return { result: hasContains ? 'unsafe' : 'warning', flagged }
+}
+
+export function getIngredients(product) {
+  return parseIngredients(product?.ingredients_text)
 }

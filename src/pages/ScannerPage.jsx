@@ -3,7 +3,7 @@ import { ScanLine, X, AlertTriangle, CheckCircle, AlertCircle, HelpCircle } from
 import { BrowserMultiFormatReader } from '@zxing/library'
 import { useProfileStore } from '../store/profileStore'
 import { useAllergenStore } from '../store/allergenStore'
-import { lookupBarcode, assessProduct } from '../lib/openFoodFacts'
+import { lookupBarcode, assessProduct, getIngredients } from '../lib/openFoodFacts'
 import { supabase } from '../lib/supabase'
 import { SEVERITY_STYLES } from '../lib/constants'
 
@@ -17,6 +17,8 @@ const RESULT_CONFIG = {
 function ResultCard({ product, result, flagged, onClose, onScanAgain }) {
   const cfg = RESULT_CONFIG[result]
   const Icon = cfg.icon
+  const ingredients = getIngredients(product)
+  const flaggedNames = new Set(flagged.map((f) => f.name.toLowerCase()))
 
   return (
     <div className={`rounded-2xl border-2 ${cfg.bg} ${cfg.border} p-5 space-y-4`}>
@@ -52,6 +54,21 @@ function ResultCard({ product, result, flagged, onClose, onScanAgain }) {
               <span className="text-xs text-gray-400">{a.match === 'traces' ? 'traces / may contain' : 'listed allergen'}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {ingredients.length > 0 && (
+        <div className="bg-white/70 rounded-xl p-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Ingredients</p>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            {product.ingredients_text.split(/([,;])/).map((part, i) => {
+              const lower = part.toLowerCase().trim()
+              const isAllergen = [...flaggedNames].some((n) => lower.includes(n))
+              return isAllergen
+                ? <mark key={i} className="bg-red-200 text-red-800 rounded px-0.5 not-italic">{part}</mark>
+                : <span key={i}>{part}</span>
+            })}
+          </p>
         </div>
       )}
 
