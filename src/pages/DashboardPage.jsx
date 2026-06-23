@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ScanLine, Search, AlertTriangle, Leaf, ChevronRight, Users, CheckCircle, XCircle } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
@@ -6,6 +6,7 @@ import { useAllergenStore } from '../store/allergenStore'
 import { useDietaryStore } from '../store/dietaryStore'
 import { SEVERITY_STYLES } from '../lib/constants'
 import { getFoodSuggestions } from '../lib/commonFoods'
+import { supabase } from '../lib/supabase'
 
 const SEVERITY_ORDER = ['anaphylactic', 'severe', 'moderate', 'mild']
 
@@ -109,6 +110,7 @@ export default function DashboardPage() {
   const { activeProfile, profiles, setActive, loading: profileLoading } = useProfileStore()
   const { allergens, fetchAllergens } = useAllergenStore()
   const { flags, fetchFlags } = useDietaryStore()
+  const [allProfileAllergens, setAllProfileAllergens] = useState({})
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -117,6 +119,25 @@ export default function DashboardPage() {
       fetchFlags(activeProfile.id)
     }
   }, [activeProfile?.id])
+
+  // Fetch allergen counts for all profiles for the family summary
+  useEffect(() => {
+    if (profiles.length < 2) return
+    const ids = profiles.map((p) => p.id)
+    supabase
+      .from('allergens')
+      .select('profile_id, severity')
+      .in('profile_id', ids)
+      .then(({ data }) => {
+        if (!data) return
+        const map = {}
+        for (const row of data) {
+          if (!map[row.profile_id]) map[row.profile_id] = {}
+          map[row.profile_id][row.severity] = (map[row.profile_id][row.severity] ?? 0) + 1
+        }
+        setAllProfileAllergens(map)
+      })
+  }, [profiles.length])
 
   const handleSwitch = async (profile) => {
     await setActive(profile)
@@ -127,13 +148,6 @@ export default function DashboardPage() {
     if (group.length) acc[s] = group
     return acc
   }, {})
-
-  const allergenCountsBySeverity = SEVERITY_ORDER.reduce((acc, s) => {
-    acc[s] = allergens.filter((a) => a.severity === s).length
-    return acc
-  }, {})
-
-  const allergensByProfile = { [activeProfile?.id]: allergenCountsBySeverity }
 
   const hasAnaphylactic = allergens.some((a) => a.severity === 'anaphylactic')
 
@@ -160,7 +174,7 @@ export default function DashboardPage() {
         <FamilySummary
           profiles={profiles}
           activeProfile={activeProfile}
-          allergensByProfile={allergensByProfile}
+          allergensByProfile={allProfileAllergens}
           onSwitch={handleSwitch}
         />
       )}
