@@ -55,17 +55,24 @@ export function assessProduct(product, allergens) {
 
   const flagged = []
 
+  // only fall back to ingredients text search when OFF has no allergen tag data at all
+  const hasTagData = allergenTags.length > 0 || tracesTags.length > 0
+
   for (const a of allergens) {
     if (!a.off_tag) continue
     const tag = a.off_tag.toLowerCase()
-    const name = a.name.toLowerCase()
 
     if (allergenTags.includes(tag)) {
-      // has exceptions — downgrade to warning so user can check
       const match = a.exceptions ? 'traces' : 'contains'
       flagged.push({ ...a, match })
-    } else if (tracesTags.includes(tag) || ingredientsText.includes(name)) {
+    } else if (tracesTags.includes(tag)) {
       flagged.push({ ...a, match: 'traces' })
+    } else if (!hasTagData) {
+      // no tag data at all — fall back to ingredient text as last resort
+      const name = a.name.toLowerCase()
+      if (ingredientsText.includes(name)) {
+        flagged.push({ ...a, match: 'traces' })
+      }
     }
   }
 

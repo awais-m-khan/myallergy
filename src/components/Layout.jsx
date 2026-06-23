@@ -77,6 +77,7 @@ export default function Layout({ children }) {
   useEffect(() => { fetchProfiles() }, [])
 
   const handleSignOut = async () => {
+    if (!window.confirm('Sign out of MyAllergy?')) return
     await signOut()
     navigate('/auth', { replace: true })
   }
@@ -99,7 +100,11 @@ export default function Layout({ children }) {
             to="/profiles"
             className="mx-3 mt-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
           >
-            <span className="text-2xl leading-none">{activeProfile.avatar_emoji}</span>
+            {activeProfile.avatar_url ? (
+              <img src={activeProfile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+            ) : (
+              <span className="text-2xl leading-none">{activeProfile.avatar_emoji}</span>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-400 font-medium">Active profile</p>
               <p className="text-sm font-semibold text-gray-900 truncate">{activeProfile.name}</p>
@@ -137,8 +142,12 @@ export default function Layout({ children }) {
           </span>
           {activeProfile && (
             <NavLink to="/profiles" className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-              <span className="text-lg">{activeProfile.avatar_emoji}</span>
-              <span>{activeProfile.name}</span>
+              {activeProfile.avatar_url ? (
+                <img src={activeProfile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-green-100 shrink-0" />
+              ) : (
+                <span className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-lg shrink-0">{activeProfile.avatar_emoji}</span>
+              )}
+              <span className="max-w-[100px] truncate">{activeProfile.name}</span>
               <ChevronDown size={14} className="text-gray-400" />
             </NavLink>
           )}

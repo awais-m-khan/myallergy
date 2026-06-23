@@ -221,7 +221,11 @@ export default function AllergensPage() {
                           Diagnosed {format(parseISO(a.diagnosed_date), 'd MMM yyyy')}
                         </p>
                       )}
-                      {a.exceptions && <p className="text-xs text-amber-600 mt-0.5">Except: {a.exceptions}</p>}
+                      {a.exceptions && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          ⚠ Except: {a.exceptions}
+                        </span>
+                      )}
                       {a.notes && <p className="text-sm text-gray-500 mt-1">{a.notes}</p>}
                     </div>
                     <div className="flex gap-1 shrink-0">

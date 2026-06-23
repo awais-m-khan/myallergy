@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck, Camera, LogOut } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck, Camera, LogOut, X } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import { useAuthStore } from '../store/authStore'
 import { supabase } from '../lib/supabase'
@@ -21,6 +21,7 @@ function ProfileModal({ profile, onClose, onSave }) {
   const [emoji, setEmoji] = useState(profile?.avatar_emoji ?? '🙂')
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url ?? null)
+  const [removeAvatar, setRemoveAvatar] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef()
@@ -31,6 +32,14 @@ function ProfileModal({ profile, onClose, onSave }) {
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return }
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
+    setRemoveAvatar(false)
+  }
+
+  const handleRemovePhoto = () => {
+    setAvatarFile(null)
+    setAvatarPreview(null)
+    setRemoveAvatar(true)
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   const handleSave = async () => {
@@ -41,6 +50,7 @@ function ProfileModal({ profile, onClose, onSave }) {
       dob: dob || null,
       avatar_emoji: emoji,
       avatarFile,
+      removeAvatar,
     })
     if (error) { setError(error.message); setSaving(false) } else { onClose() }
   }
@@ -69,9 +79,17 @@ function ProfileModal({ profile, onClose, onSave }) {
               >
                 <Camera size={13} className="text-white" />
               </button>
+              {avatarPreview && (
+                <button
+                  onClick={handleRemovePhoto}
+                  className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-md"
+                >
+                  <X size={11} className="text-white" />
+                </button>
+              )}
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             </div>
-            <p className="text-xs text-gray-400">Tap camera to add a photo</p>
+            <p className="text-xs text-gray-400">{avatarPreview ? 'Tap ✕ to remove photo' : 'Tap camera to add a photo'}</p>
           </div>
 
           {/* Emoji (shown if no photo) */}
@@ -147,6 +165,7 @@ export default function ProfilesPage() {
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
+    if (!confirm('Sign out of MyAllergy?')) return
     await signOut()
     navigate('/auth', { replace: true })
   }
@@ -178,12 +197,14 @@ export default function ProfilesPage() {
     setDeleting(null)
   }
 
-  const handleSave = async (existingProfile, { avatarFile, ...fields }) => {
+  const handleSave = async (existingProfile, { avatarFile, removeAvatar, ...fields }) => {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (existingProfile) {
       let avatarUrl = existingProfile.avatar_url
-      if (avatarFile) {
+      if (removeAvatar) {
+        avatarUrl = null
+      } else if (avatarFile) {
         const { url, error } = await uploadAvatar(user.id, existingProfile.id, avatarFile)
         if (error) return { error }
         avatarUrl = url
