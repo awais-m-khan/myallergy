@@ -1,22 +1,115 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ScanLine, Search, AlertTriangle, Leaf, ChevronRight, Users } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ScanLine, Search, AlertTriangle, Leaf, ChevronRight, Users, CheckCircle, XCircle } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
 import { useAllergenStore } from '../store/allergenStore'
 import { useDietaryStore } from '../store/dietaryStore'
 import { SEVERITY_STYLES } from '../lib/constants'
+import { getFoodSuggestions } from '../lib/commonFoods'
 
 const SEVERITY_ORDER = ['anaphylactic', 'severe', 'moderate', 'mild']
+
+function Avatar({ profile, size = 'md' }) {
+  const dim = size === 'lg' ? 'w-14 h-14 text-4xl' : 'w-10 h-10 text-2xl'
+  if (profile.avatar_url) {
+    return <img src={profile.avatar_url} alt={profile.name} className={`${dim} rounded-full object-cover shrink-0`} />
+  }
+  return <span className={`${dim} flex items-center justify-center shrink-0`}>{profile.avatar_emoji}</span>
+}
 
 function SeverityBadge({ severity }) {
   const { badge, label } = SEVERITY_STYLES[severity] ?? {}
   return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${badge}`}>{label}</span>
 }
 
+function FamilySummary({ profiles, activeProfile, allergensByProfile, onSwitch }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-semibold text-gray-900">Family overview</h2>
+        <Link to="/profiles" className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-0.5">
+          Manage <ChevronRight size={13} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {profiles.map((p) => {
+          const isActive = activeProfile?.id === p.id
+          const counts = allergensByProfile[p.id] ?? {}
+          const topSeverity = SEVERITY_ORDER.find((s) => counts[s] > 0)
+          return (
+            <button
+              key={p.id}
+              onClick={() => onSwitch(p)}
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-colors text-center ${
+                isActive ? 'border-green-400 bg-green-50' : 'border-gray-100 hover:border-gray-200 bg-white'
+              }`}
+            >
+              <Avatar profile={p} size="md" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900 truncate max-w-[80px]">{p.name}</p>
+                {topSeverity && (
+                  <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${SEVERITY_STYLES[topSeverity].badge}`}>
+                    {counts[topSeverity]} {SEVERITY_STYLES[topSeverity].label.toLowerCase()}
+                  </span>
+                )}
+                {!topSeverity && (
+                  <span className="text-xs text-gray-400">No allergens</span>
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function FoodSuggestions({ allergens }) {
+  if (allergens.length === 0) return null
+  const { safe, unsafe } = getFoodSuggestions(allergens)
+
+  return (
+    <div className="space-y-3">
+      {safe.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <CheckCircle size={18} className="text-green-500" /> Top 10 safe foods
+          </h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            {safe.map((f) => (
+              <div key={f.name} className="flex items-center gap-1.5 text-sm text-gray-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                {f.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {unsafe.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <XCircle size={18} className="text-red-400" /> Top 10 to avoid
+          </h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            {unsafe.map((f) => (
+              <div key={f.name} className="flex items-center gap-1.5 text-sm text-gray-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                {f.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DashboardPage() {
-  const { activeProfile, profiles, loading: profileLoading } = useProfileStore()
+  const { activeProfile, profiles, setActive, loading: profileLoading } = useProfileStore()
   const { allergens, fetchAllergens } = useAllergenStore()
   const { flags, fetchFlags } = useDietaryStore()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (activeProfile?.id) {
@@ -25,18 +118,26 @@ export default function DashboardPage() {
     }
   }, [activeProfile?.id])
 
-  // Group allergens by severity
+  const handleSwitch = async (profile) => {
+    await setActive(profile)
+  }
+
   const grouped = SEVERITY_ORDER.reduce((acc, s) => {
     const group = allergens.filter((a) => a.severity === s)
     if (group.length) acc[s] = group
     return acc
   }, {})
 
+  const allergenCountsBySeverity = SEVERITY_ORDER.reduce((acc, s) => {
+    acc[s] = allergens.filter((a) => a.severity === s).length
+    return acc
+  }, {})
+
+  const allergensByProfile = { [activeProfile?.id]: allergenCountsBySeverity }
+
   const hasAnaphylactic = allergens.some((a) => a.severity === 'anaphylactic')
 
-  if (profileLoading) {
-    return <div className="p-8 text-sm text-gray-400">Loading…</div>
-  }
+  if (profileLoading) return <div className="p-8 text-sm text-gray-400">Loading…</div>
 
   if (!activeProfile) {
     return (
@@ -52,10 +153,21 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-5">
-      {/* Profile header */}
+    <div className="p-6 max-w-2xl mx-auto space-y-4">
+
+      {/* Family summary — only when 2+ profiles */}
+      {profiles.length > 1 && (
+        <FamilySummary
+          profiles={profiles}
+          activeProfile={activeProfile}
+          allergensByProfile={allergensByProfile}
+          onSwitch={handleSwitch}
+        />
+      )}
+
+      {/* Active profile header */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
-        <span className="text-5xl">{activeProfile.avatar_emoji}</span>
+        <Avatar profile={activeProfile} size="lg" />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">{activeProfile.name}</h1>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -133,6 +245,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Food suggestions */}
+      <FoodSuggestions allergens={allergens} />
 
       {/* Empty state CTAs */}
       {allergens.length === 0 && (

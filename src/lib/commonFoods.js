@@ -1,0 +1,82 @@
+export const COMMON_FOODS = [
+  { name: 'White rice',       tags: [] },
+  { name: 'Chicken breast',   tags: [] },
+  { name: 'Beef',             tags: [] },
+  { name: 'Lamb',             tags: [] },
+  { name: 'Pork',             tags: [] },
+  { name: 'Potato',           tags: [] },
+  { name: 'Carrot',           tags: [] },
+  { name: 'Broccoli',         tags: [] },
+  { name: 'Spinach',          tags: [] },
+  { name: 'Tomato',           tags: [] },
+  { name: 'Cucumber',         tags: [] },
+  { name: 'Avocado',          tags: [] },
+  { name: 'Apple',            tags: [] },
+  { name: 'Banana',           tags: [] },
+  { name: 'Orange',           tags: [] },
+  { name: 'Mango',            tags: [] },
+  { name: 'Grapes',           tags: [] },
+  { name: 'Strawberries',     tags: [] },
+  { name: 'Lentils',          tags: [] },
+  { name: 'Chickpeas',        tags: [] },
+  { name: 'Corn',             tags: [] },
+  { name: 'Olive oil',        tags: [] },
+  { name: 'Honey',            tags: [] },
+  { name: 'Salmon',           tags: ['en:fish'] },
+  { name: 'Tuna',             tags: ['en:fish'] },
+  { name: 'Cod',              tags: ['en:fish'] },
+  { name: 'Shrimp',           tags: ['en:crustaceans'] },
+  { name: 'Crab',             tags: ['en:crustaceans'] },
+  { name: 'Lobster',          tags: ['en:crustaceans'] },
+  { name: 'Mussels',          tags: ['en:molluscs'] },
+  { name: 'Oysters',          tags: ['en:molluscs'] },
+  { name: 'Squid',            tags: ['en:molluscs'] },
+  { name: 'Milk',             tags: ['en:milk'] },
+  { name: 'Cheese',           tags: ['en:milk'] },
+  { name: 'Butter',           tags: ['en:milk'] },
+  { name: 'Yogurt',           tags: ['en:milk'] },
+  { name: 'Ice cream',        tags: ['en:milk', 'en:eggs'] },
+  { name: 'Scrambled eggs',   tags: ['en:eggs'] },
+  { name: 'Omelette',         tags: ['en:eggs', 'en:milk'] },
+  { name: 'White bread',      tags: ['en:gluten', 'en:wheat'] },
+  { name: 'Pasta',            tags: ['en:gluten', 'en:wheat'] },
+  { name: 'Pizza',            tags: ['en:gluten', 'en:wheat', 'en:milk'] },
+  { name: 'Oats',             tags: ['en:gluten'] },
+  { name: 'Cookies',          tags: ['en:gluten', 'en:wheat', 'en:eggs', 'en:milk'] },
+  { name: 'Cake',             tags: ['en:gluten', 'en:wheat', 'en:eggs', 'en:milk'] },
+  { name: 'Peanut butter',    tags: ['en:peanuts'] },
+  { name: 'Peanuts',          tags: ['en:peanuts'] },
+  { name: 'Almonds',          tags: ['en:nuts'] },
+  { name: 'Walnuts',          tags: ['en:nuts'] },
+  { name: 'Cashews',          tags: ['en:nuts'] },
+  { name: 'Hazelnuts',        tags: ['en:nuts'] },
+  { name: 'Pesto',            tags: ['en:nuts', 'en:milk'] },
+  { name: 'Tofu',             tags: ['en:soybeans'] },
+  { name: 'Soy milk',         tags: ['en:soybeans'] },
+  { name: 'Edamame',          tags: ['en:soybeans'] },
+  { name: 'Miso soup',        tags: ['en:soybeans'] },
+  { name: 'Sesame seeds',     tags: ['en:sesame-seeds'] },
+  { name: 'Tahini',           tags: ['en:sesame-seeds'] },
+  { name: 'Hummus',           tags: ['en:sesame-seeds'] },
+  { name: 'Mustard',          tags: ['en:mustard'] },
+  { name: 'Mayonnaise',       tags: ['en:eggs', 'en:mustard'] },
+  { name: 'Celery',           tags: ['en:celery'] },
+  { name: 'Wine',             tags: ['en:sulphur-dioxide-and-sulphites'] },
+  { name: 'Dried fruits',     tags: ['en:sulphur-dioxide-and-sulphites'] },
+  { name: 'Milk chocolate',   tags: ['en:milk', 'en:soybeans', 'en:nuts'] },
+  { name: 'Dark chocolate',   tags: ['en:soybeans', 'en:milk'] },
+  { name: 'Lupin flour',      tags: ['en:lupin'] },
+]
+
+export function getFoodSuggestions(allergens) {
+  const allergenTags = new Set(allergens.map((a) => a.off_tag).filter(Boolean))
+  const safe = []
+  const unsafe = []
+
+  for (const food of COMMON_FOODS) {
+    if (food.tags.some((t) => allergenTags.has(t))) unsafe.push(food)
+    else safe.push(food)
+  }
+
+  return { safe: safe.slice(0, 10), unsafe: unsafe.slice(0, 10) }
+}

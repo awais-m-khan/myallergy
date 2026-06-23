@@ -1,52 +1,98 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, Link2, Copy, CheckCheck, Camera } from 'lucide-react'
 import { useProfileStore } from '../store/profileStore'
+import { supabase } from '../lib/supabase'
 
 const EMOJIS = ['🙂','😊','🧒','👦','👧','🧑','👨','👩','🧓','👴','👵','🧑‍🍼','👶','🐣','🌱']
 
+function Avatar({ profile, size = 'md' }) {
+  const dim = size === 'lg' ? 'w-16 h-16 text-4xl' : size === 'sm' ? 'w-9 h-9 text-xl' : 'w-12 h-12 text-3xl'
+  if (profile.avatar_url) {
+    return <img src={profile.avatar_url} alt={profile.name} className={`${dim} rounded-full object-cover shrink-0`} />
+  }
+  return <span className={`${dim} flex items-center justify-center shrink-0`}>{profile.avatar_emoji}</span>
+}
 
 function ProfileModal({ profile, onClose, onSave }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [dob, setDob] = useState(profile?.dob ?? '')
   const [emoji, setEmoji] = useState(profile?.avatar_emoji ?? '🙂')
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(profile?.avatar_url ?? null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const fileRef = useRef()
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB'); return }
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
 
   const handleSave = async () => {
     if (!name.trim()) { setError('Name is required'); return }
     setSaving(true)
-    const { error } = await onSave({ name: name.trim(), dob: dob || null, avatar_emoji: emoji })
+    const { error } = await onSave({
+      name: name.trim(),
+      dob: dob || null,
+      avatar_emoji: emoji,
+      avatarFile,
+    })
     if (error) { setError(error.message); setSaving(false) } else { onClose() }
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end md:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-        <div className="p-5 border-b border-gray-100">
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl max-h-[92vh] overflow-y-auto">
+        <div className="p-5 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
           <h2 className="font-semibold text-gray-900">{profile ? 'Edit profile' : 'Add profile'}</h2>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Emoji picker */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Avatar</label>
-            <div className="flex flex-wrap gap-2">
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className={`w-9 h-9 text-xl rounded-lg flex items-center justify-center border-2 transition-colors ${
-                    emoji === e ? 'border-green-500 bg-green-50' : 'border-transparent hover:bg-gray-100'
-                  }`}
-                >
-                  {e}
-                </button>
-              ))}
+        <div className="p-5 space-y-5">
+          {/* Photo upload */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="preview" className="w-20 h-20 rounded-full object-cover border-2 border-gray-200" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-4xl border-2 border-gray-200">
+                  {emoji}
+                </div>
+              )}
+              <button
+                onClick={() => fileRef.current.click()}
+                className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md"
+              >
+                <Camera size={13} className="text-white" />
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             </div>
+            <p className="text-xs text-gray-400">Tap camera to add a photo</p>
           </div>
 
-          {/* Name */}
+          {/* Emoji (shown if no photo) */}
+          {!avatarPreview && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Or pick an emoji avatar</label>
+              <div className="flex flex-wrap gap-2">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => setEmoji(e)}
+                    className={`w-9 h-9 text-xl rounded-lg flex items-center justify-center border-2 transition-colors ${
+                      emoji === e ? 'border-green-500 bg-green-50' : 'border-transparent hover:bg-gray-100'
+                    }`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
@@ -58,7 +104,6 @@ function ProfileModal({ profile, onClose, onSave }) {
             />
           </div>
 
-          {/* DOB */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date of birth <span className="text-gray-400 font-normal">(optional)</span>
@@ -75,10 +120,7 @@ function ProfileModal({ profile, onClose, onSave }) {
         </div>
 
         <div className="p-5 pt-0 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
-          >
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
           <button
@@ -95,8 +137,8 @@ function ProfileModal({ profile, onClose, onSave }) {
 }
 
 export default function ProfilesPage() {
-  const { profiles, activeProfile, fetchProfiles, setActive, createProfile, updateProfile, deleteProfile, loading } = useProfileStore()
-  const [modal, setModal] = useState(null) // null | 'add' | profile object
+  const { profiles, activeProfile, fetchProfiles, setActive, createProfile, updateProfile, uploadAvatar, deleteProfile, loading } = useProfileStore()
+  const [modal, setModal] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [copied, setCopied] = useState(null)
   const [togglingShare, setTogglingShare] = useState(null)
@@ -129,9 +171,30 @@ export default function ProfilesPage() {
     setDeleting(null)
   }
 
-  if (loading) {
-    return <div className="p-8 text-sm text-gray-400">Loading profiles…</div>
+  const handleSave = async (existingProfile, { avatarFile, ...fields }) => {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (existingProfile) {
+      let avatarUrl = existingProfile.avatar_url
+      if (avatarFile) {
+        const { url, error } = await uploadAvatar(user.id, existingProfile.id, avatarFile)
+        if (error) return { error }
+        avatarUrl = url
+      }
+      return updateProfile(existingProfile.id, { ...fields, avatar_url: avatarUrl })
+    } else {
+      const { error, data } = await createProfile(fields)
+      if (error) return { error }
+      // upload avatar after profile is created so we have the ID
+      if (avatarFile && data) {
+        const { url } = await uploadAvatar(user.id, data.id, avatarFile)
+        if (url) await updateProfile(data.id, { avatar_url: url })
+      }
+      return { error: null }
+    }
   }
+
+  if (loading) return <div className="p-8 text-sm text-gray-400">Loading profiles…</div>
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -141,8 +204,7 @@ export default function ProfilesPage() {
           onClick={() => setModal('add')}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg"
         >
-          <Plus size={16} />
-          Add profile
+          <Plus size={16} /> Add profile
         </button>
       </div>
 
@@ -169,11 +231,8 @@ export default function ProfilesPage() {
                   </span>
                 )}
 
-                <button
-                  className="flex items-center gap-3 w-full text-left"
-                  onClick={() => handleSetActive(profile)}
-                >
-                  <span className="text-4xl">{profile.avatar_emoji}</span>
+                <button className="flex items-center gap-3 w-full text-left" onClick={() => handleSetActive(profile)}>
+                  <Avatar profile={profile} size="md" />
                   <div>
                     <p className="font-semibold text-gray-900">{profile.name}</p>
                     {profile.dob && (
@@ -209,10 +268,7 @@ export default function ProfilesPage() {
                       <p className="text-xs text-green-700 truncate flex-1 font-mono">
                         {window.location.origin}/s/{profile.share_token}
                       </p>
-                      <button
-                        onClick={() => handleCopyLink(profile)}
-                        className="shrink-0 text-green-600 hover:text-green-800"
-                      >
+                      <button onClick={() => handleCopyLink(profile)} className="shrink-0 text-green-600 hover:text-green-800">
                         {copied === profile.id ? <CheckCheck size={14} /> : <Copy size={14} />}
                       </button>
                     </div>
@@ -220,10 +276,7 @@ export default function ProfilesPage() {
                 </div>
 
                 <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => setModal(profile)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
-                  >
+                  <button onClick={() => setModal(profile)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
                     <Pencil size={13} /> Edit
                   </button>
                   {profiles.length > 1 && (
@@ -243,17 +296,10 @@ export default function ProfilesPage() {
       )}
 
       {modal === 'add' && (
-        <ProfileModal
-          onClose={() => setModal(null)}
-          onSave={(fields) => createProfile(fields)}
-        />
+        <ProfileModal onClose={() => setModal(null)} onSave={(fields) => handleSave(null, fields)} />
       )}
       {modal && modal !== 'add' && (
-        <ProfileModal
-          profile={modal}
-          onClose={() => setModal(null)}
-          onSave={(fields) => updateProfile(modal.id, fields)}
-        />
+        <ProfileModal profile={modal} onClose={() => setModal(null)} onSave={(fields) => handleSave(modal, fields)} />
       )}
     </div>
   )

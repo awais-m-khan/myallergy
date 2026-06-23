@@ -41,13 +41,13 @@ export const useProfileStore = create((set, get) => ({
       .select()
       .single()
 
-    if (error || !data) return { error }
+    if (error || !data) return { error, data: null }
 
     set((s) => ({
       profiles: [...s.profiles, data],
       activeProfile: isFirst ? data : s.activeProfile,
     }))
-    return { error: null }
+    return { error: null, data }
   },
 
   updateProfile: async (id, fields) => {
@@ -65,6 +65,15 @@ export const useProfileStore = create((set, get) => ({
       activeProfile: s.activeProfile?.id === id ? data : s.activeProfile,
     }))
     return { error: null }
+  },
+
+  uploadAvatar: async (userId, profileId, file) => {
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/${profileId}.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (error) return { url: null, error }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    return { url: publicUrl, error: null }
   },
 
   deleteProfile: async (id) => {

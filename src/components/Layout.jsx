@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, AlertTriangle, Leaf,
+  LayoutDashboard, Users, AlertTriangle, Leaf as LeafIcon,
   ScanLine, Search, History, LogOut, ChevronDown,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
@@ -11,7 +11,7 @@ const navItems = [
   { to: '/',          label: 'Dashboard',  icon: LayoutDashboard },
   { to: '/profiles',  label: 'Profiles',   icon: Users },
   { to: '/allergens', label: 'Allergens',  icon: AlertTriangle },
-  { to: '/dietary',   label: 'Dietary',    icon: Leaf },
+  { to: '/dietary',   label: 'Dietary',    icon: LeafIcon },
   { to: '/scanner',   label: 'Scanner',    icon: ScanLine },
   { to: '/search',    label: 'Search',     icon: Search },
   { to: '/history',   label: 'History',    icon: History },
@@ -88,7 +88,7 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div className="px-5 py-4 border-b border-gray-100">
           <span className="flex items-center gap-2.5">
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-green-600 ring-2 ring-orange-100 text-lg shadow-sm">🌿</span>
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 ring-2 ring-orange-300 shadow-sm"><LeafIcon size={16} className="text-white" strokeWidth={2} /></span>
             <span className="text-lg font-bold"><span className="text-gray-900">My</span><span className="text-green-600">Allergy</span></span>
           </span>
         </div>

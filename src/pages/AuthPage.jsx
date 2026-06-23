@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Leaf } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
@@ -44,8 +45,8 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 shadow-md ring-4 ring-orange-100 mx-auto">
-            <span className="text-3xl">🌿</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-500 shadow-lg ring-4 ring-orange-300 mx-auto">
+            <Leaf size={30} className="text-white" strokeWidth={2} />
           </div>
           <h1 className="mt-3 text-2xl font-bold">
             <span className="text-gray-900">My</span><span className="text-green-600">Allergy</span>
